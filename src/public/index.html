@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이곳이 맛있더라</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>이곳이 맛있더라</h1>
+            <p style="color: var(--text-muted)">Leave a message for the world.</p>
+        </header>
+
+        <div class="card">
+            <form id="guestbookForm">
+                <div class="input-group">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" placeholder="Your name" required autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label for="message">Message</label>
+                    <textarea id="message" rows="3" placeholder="Share your thoughts..." required></textarea>
+                </div>
+                <button type="submit">Post Message</button>
+            </form>
+        </div>
+
+        <div id="messages" class="message-list">
+            <!-- Messages will be loaded here -->
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/messages';
+
+        async function fetchMessages() {
+            try {
+                const res = await fetch(API_BASE);
+                const messages = await res.json();
+                renderMessages(messages);
+            } catch (err) {
+                console.error('Failed to fetch messages', err);
+            }
+        }
+
+        function renderMessages(messages) {
+            const container = document.getElementById('messages');
+            container.innerHTML = messages.map(msg => `
+                <div class="message-item">
+                    <div class="message-header">
+                        <span class="author">${escapeHtml(msg.name)}</span>
+                        <span class="date">${new Date(msg.createdAt).toLocaleString()}</span>
+                    </div>
+                    <div class="message-content">${escapeHtml(msg.message)}</div>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        document.getElementById('guestbookForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nameInput = document.getElementById('name');
+            const msgInput = document.getElementById('message');
+            const button = e.target.querySelector('button');
+
+            const name = nameInput.value;
+            const message = msgInput.value;
+
+            button.disabled = true;
+            button.textContent = 'Posting...';
+
+            try {
+                await fetch(API_BASE, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, message })
+                });
+
+                nameInput.value = '';
+                msgInput.value = '';
+                await fetchMessages();
+            } catch (err) {
+                alert('Failed to post message');
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Post Message';
+            }
+        });
+
+        // Initial load
+        fetchMessages();
+    </script>
+</body>
+
+</html>
